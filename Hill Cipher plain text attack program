@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <math.h>
+
+// Function to calculate the modular inverse of a number
+int modInverse(int a, int m) {
+    a = a % m;
+    for (int i = 1; i < m; i++)
+        if ((a * i) % m == 1)
+            return i;
+    return -1;
+}
+
+// Function to calculate the determinant of a 2x2 matrix
+int determinant(int a, int b, int c, int d) {
+    return (a * d - b * c + 26) % 26;
+}
+
+// Function to calculate the adjugate of a 2x2 matrix
+void adjugate(int a, int b, int c, int d, int *adjA, int *adjB, int *adjC, int *adjD) {
+    *adjA = d;
+    *adjB = -b;
+    *adjC = -c;
+    *adjD = a;
+
+    // Make sure elements are positive and within the range [0, 25]
+    *adjA = (*adjA + 26) % 26;
+    *adjB = (*adjB + 26) % 26;
+    *adjC = (*adjC + 26) % 26;
+    *adjD = (*adjD + 26) % 26;
+}
+
+// Function to perform a plaintext attack on a 2x2 Hill cipher
+void plaintextAttack(const char *plaintext, const char *ciphertext, int *key) {
+    int a, b, c, d; // Elements of the key matrix
+    int adjA, adjB, adjC, adjD; // Adjugate of the key matrix
+
+    // Calculate the elements of the key matrix
+    a = ((ciphertext[0] - 'A') - (ciphertext[2] - 'A') + 26) % 26;
+    b = ((ciphertext[1] - 'A') - (ciphertext[3] - 'A') + 26) % 26;
+    c = ((plaintext[0] - 'A') - (plaintext[2] - 'A') + 26) % 26;
+    d = ((plaintext[1] - 'A') - (plaintext[3] - 'A') + 26) % 26;
+
+    // Calculate the determinant of the key matrix
+    int det = determinant(a, b, c, d);
+
+    // Check if the determinant has a modular inverse
+    int detInverse = modInverse(det, 26);
+    if (detInverse == -1) {
+        printf("Cannot find a key. Determinant has no modular inverse.\n");
+        return;
+    }
+
+    // Calculate the adjugate of the key matrix
+    adjugate(a, b, c, d, &adjA, &adjB, &adjC, &adjD);
+
+    // Calculate the inverse of the key matrix
+    key[0] = (detInverse * adjA) % 26;
+    key[1] = (detInverse * adjB) % 26;
+    key[2] = (detInverse * adjC) % 26;
+    key[3] = (detInverse * adjD) % 26;
+
+    // Display the calculated key matrix
+    printf("Calculated Key Matrix:\n");
+    printf("%d\t%d\n", key[0], key[1]);
+    printf("%d\t%d\n", key[2], key[3]);
+}
+
+// Function to decrypt a message using a 2x2 Hill cipher
+void decryptHillCipher(const char *ciphertext, const int *key, char *decrypted) {
+    for (int i = 0; i < strlen(ciphertext); i += 2) {
+        int x = (ciphertext[i] - 'A') * key[0] + (ciphertext[i + 1] - 'A') * key[1];
+        int y = (ciphertext[i] - 'A') * key[2] + (ciphertext[i + 1] - 'A') * key[3];
+
+        decrypted[i] = (x % 26 + 26) % 26 + 'A';
+        decrypted[i + 1] = (y % 26 + 26) % 26 + 'A';
+    }
+}
+
+int main() {
+    const char *plaintext = "HELLO";
+    const char *ciphertext = "JLALD";
+    int key[4];
+
+    plaintextAttack(plaintext, ciphertext, key);
+
+    char decrypted[100];
+    decryptHillCipher(ciphertext, key, decrypted);
+
+    printf("Plaintext: %s\n", plaintext);
+    printf("Ciphertext: %s\n", ciphertext);
+    printf("Decrypted Text: %s\n",
