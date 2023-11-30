@@ -1,0 +1,111 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+
+#define MESSAGE "Hello, DES!"
+
+void handleErrors(void)
+{
+    fprintf(stderr, "Error occurred\n");
+    exit(EXIT_FAILURE);
+}
+
+void generateRandomKey(unsigned char *key, size_t keySize)
+{
+    if (RAND_bytes(key, keySize) != 1) {
+        handleErrors();
+    }
+}
+
+void encryptDES(const unsigned char *plaintext, size_t plaintextLen, const unsigned char *key, unsigned char *ciphertext)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        handleErrors();
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_des_ecb(), NULL, key, NULL) != 1) {
+        handleErrors();
+    }
+
+    int len;
+    if (EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintextLen) != 1) {
+        handleErrors();
+    }
+
+    int ciphertextLen = len;
+
+    if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &len) != 1) {
+        handleErrors();
+    }
+
+    ciphertextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+}
+
+void decryptDES(const unsigned char *ciphertext, size_t ciphertextLen, const unsigned char *key, unsigned char *decryptedtext)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        handleErrors();
+    }
+
+    if (EVP_DecryptInit_ex(ctx, EVP_des_ecb(), NULL, key, NULL) != 1) {
+        handleErrors();
+    }
+
+    int len;
+    if (EVP_DecryptUpdate(ctx, decryptedtext, &len, ciphertext, ciphertextLen) != 1) {
+        handleErrors();
+    }
+
+    int decryptedLen = len;
+
+    if (EVP_DecryptFinal_ex(ctx, decryptedtext + len, &len) != 1) {
+        handleErrors();
+    }
+
+    decryptedLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+}
+
+int main()
+{
+    // Generate random DES key
+    unsigned char key[EVP_MAX_KEY_LENGTH];
+    generateRandomKey(key, sizeof(key));
+
+    // The message to be encrypted
+    const char *plaintext = MESSAGE;
+    size_t plaintextLen = strlen(plaintext);
+
+    // Allocate memory for ciphertext
+    unsigned char ciphertext[1024]; // Use an appropriate size
+
+    // Encrypt using DES
+    encryptDES((const unsigned char *)plaintext, plaintextLen, key, ciphertext);
+
+    // Allocate memory for decrypted text
+    unsigned char decryptedtext[1024]; // Use an appropriate size
+
+    // Decrypt using DES
+    decryptDES(ciphertext, plaintextLen, key, decryptedtext);
+
+    // Print results
+    printf("Original Text: %s\n", plaintext);
+    printf("DES Encrypted Text: ");
+    for (size_t i = 0; i < plaintextLen; ++i) {
+        printf("%02x", ciphertext[i]);
+    }
+    printf("\n");
+
+    printf("DES Decrypted Text: %s\n", decryptedtext);
+
+    return 0;
+}
