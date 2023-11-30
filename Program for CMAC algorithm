@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/cmac.h>
+#include <openssl/aes.h>
+#include <openssl/rand.h>
+
+#define AES_BLOCK_SIZE 16
+
+void handleErrors(void)
+{
+    fprintf(stderr, "Error occurred\n");
+    exit(EXIT_FAILURE);
+}
+
+void generateRandomKey(unsigned char *key, size_t keySize)
+{
+    if (RAND_bytes(key, keySize) != 1) {
+        handleErrors();
+    }
+}
+
+void generateRandomIV(unsigned char *iv)
+{
+    if (RAND_bytes(iv, AES_BLOCK_SIZE) != 1) {
+        handleErrors();
+    }
+}
+
+void generateRandomData(unsigned char *data, size_t dataSize)
+{
+    if (RAND_bytes(data, dataSize) != 1) {
+        handleErrors();
+    }
+}
+
+void computeCMAC(const unsigned char *data, size_t dataSize, const unsigned char *key, unsigned char *cmacResult)
+{
+    CMAC_CTX *ctx;
+    size_t cmacLen = AES_BLOCK_SIZE;
+
+    if (!(ctx = CMAC_CTX_new())) {
+        handleErrors();
+    }
+
+    if (CMAC_Init(ctx, key, AES_BLOCK_SIZE, EVP_aes_128_cbc(), NULL) != 1) {
+        handleErrors();
+    }
+
+    if (CMAC_Update(ctx, data, dataSize) != 1) {
+        handleErrors();
+    }
+
+    if (CMAC_Final(ctx, cmacResult, &cmacLen) != 1) {
+        handleErrors();
+    }
+
+    CMAC_CTX_free(ctx);
+}
+
+int main()
+{
+    // Generate random AES key
+    unsigned char key[AES_BLOCK_SIZE];
+    generateRandomKey(key, sizeof(key));
+
+    // The data for which CMAC will be computed
+    const char *data = "Hello, CMAC!";
+
+    // Allocate memory for CMAC result
+    unsigned char cmacResult[AES_BLOCK_SIZE];
+
+    // Compute CMAC
+    computeCMAC((const unsigned char *)data, strlen(data), key, cmacResult);
+
+    // Print results
+    printf("Data: %s\n", data);
+    printf("CMAC Result: ");
+    for (size_t i = 0; i < AES_BLOCK_SIZE; ++i) {
+        printf("%02x", cmacResult[i]);
+    }
+    printf("\n");
+
+    return 0;
+}
