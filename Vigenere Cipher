@@ -1,0 +1,56 @@
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+
+void vigenereEncrypt(char *plaintext, const char *key) {
+    int keyLength = strlen(key);
+    int i, j;
+
+    for (i = 0, j = 0; plaintext[i] != '\0'; ++i) {
+        if (isalpha(plaintext[i])) {
+            char base = isupper(plaintext[i]) ? 'A' : 'a';
+            plaintext[i] = (plaintext[i] + key[j] - 2 * base) % 26 + base;
+            j = (j + 1) % keyLength;
+        }
+    }
+}
+
+void vigenereDecrypt(char *ciphertext, const char *key) {
+    int keyLength = strlen(key);
+    int i, j;
+
+    for (i = 0, j = 0; ciphertext[i] != '\0'; ++i) {
+        if (isalpha(ciphertext[i])) {
+            char base = isupper(ciphertext[i]) ? 'A' : 'a';
+            ciphertext[i] = (ciphertext[i] - key[j] + 26) % 26 + base;
+            j = (j + 1) % keyLength;
+        }
+    }
+}
+
+int main() {
+    char plaintext[1000];
+    char key[100];
+    char ciphertext[1000];
+
+    // Input plaintext and key
+    printf("Enter plaintext: ");
+    fgets(plaintext, sizeof(plaintext), stdin);
+    printf("Enter key: ");
+    fgets(key, sizeof(key), stdin);
+
+    // Remove newline characters from inputs
+    plaintext[strcspn(plaintext, "\n")] = '\0';
+    key[strcspn(key, "\n")] = '\0';
+
+    // Encrypt and print the result
+    strcpy(ciphertext, plaintext);
+    vigenereEncrypt(ciphertext, key);
+    printf("Encrypted Text: %s\n", ciphertext);
+
+    // Decrypt and print the result
+    vigenereDecrypt(ciphertext, key);
+    printf("Decrypted Text: %s\n", ciphertext);
+
+    return 0;
+}
