@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+// Function to count letter frequencies in a string
+void countLetterFrequencies(const char *text, int *frequencies) {
+    for (int i = 0; text[i] != '\0'; i++) {
+        if (isalpha(text[i])) {
+            char ch = tolower(text[i]);
+            frequencies[ch - 'a']++;
+        }
+    }
+}
+
+// Function to find the most frequent letter in the frequencies array
+int findMostFrequentLetter(const int *frequencies) {
+    int maxFrequency = 0;
+    int mostFrequentLetter = 0;
+
+    for (int i = 0; i < 26; i++) {
+        if (frequencies[i] > maxFrequency) {
+            maxFrequency = frequencies[i];
+            mostFrequentLetter = i;
+        }
+    }
+
+    return mostFrequentLetter;
+}
+
+// Function to perform a frequency analysis attack on a monoalphabetic substitution cipher
+void frequencyAnalysisAttack(const char *ciphertext, char *decrypted, const char *languageFrequencies) {
+    int frequencies[26] = {0};
+
+    // Count letter frequencies in the ciphertext
+    countLetterFrequencies(ciphertext, frequencies);
+
+    // Find the most frequent letter in the ciphertext
+    int mostFrequentLetterCiphertext = findMostFrequentLetter(frequencies);
+    int mostFrequentLetterLanguage = languageFrequencies[0] - 'a';
+
+    // Calculate the key based on the assumption
+    int key = (mostFrequentLetterLanguage - mostFrequentLetterCiphertext + 26) % 26;
+
+    // Decrypt the message using the calculated key
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        if (isalpha(ciphertext[i])) {
+            char ch = tolower(ciphertext[i]);
+            decrypted[i] = (ch - 'a' + key) % 26 + 'a';
+            decrypted[i] = isupper(ciphertext[i]) ? toupper(decrypted[i]) : decrypted[i];
+        } else {
+            decrypted[i] = ciphertext[i];
+        }
+    }
+
+    // Print the decrypted message
+    printf("Ciphertext: %s\n", ciphertext);
+    printf("Decrypted Text: %s\n", decrypted);
+}
+
+int main() {
+    const char *ciphertext = "Ymj qfgtbwx htrjymji yt ymj kwtr fsi nx f xjhwjy";
+    char decrypted[100];
+    const char *englishLetterFrequencies = "etaoinshrdlcumwfgypbvkjxqz";
+
+    frequencyAnalysisAttack(ciphertext, decrypted, englishLetterFrequencies);
+
+    return 0;
+}
