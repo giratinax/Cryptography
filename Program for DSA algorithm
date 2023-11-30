@@ -1,0 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/dsa.h>
+#include <openssl/sha.h>
+
+#define MESSAGE "Hello, DSA!"
+
+void handleErrors(void)
+{
+    fprintf(stderr, "Error occurred\n");
+    exit(EXIT_FAILURE);
+}
+
+DSA *generateDSAKeyPair(void)
+{
+    DSA *dsa;
+
+    if (!(dsa = DSA_generate_parameters(1024, NULL, 0, NULL, NULL, NULL, NULL))) {
+        handleErrors();
+    }
+
+    if (!(DSA_generate_key(dsa))) {
+        handleErrors();
+    }
+
+    return dsa;
+}
+
+void signAndVerify(DSA *dsa)
+{
+    unsigned char hash[SHA_DIGEST_LENGTH];
+    unsigned char signature[DSA_size(dsa)];
+    DSA_SIG *dsasig;
+
+    // Hash the message
+    SHA1((const unsigned char *)MESSAGE, strlen(MESSAGE), hash);
+
+    // Sign the hash
+    dsasig = DSA_do_sign(hash, sizeof(hash), dsa);
+    if (!dsasig) {
+        handleErrors();
+    }
+
+    // Verify the signature
+    if (DSA_do_verify(hash, sizeof(hash), dsasig, dsa) != 1) {
+        fprintf(stderr, "DSA verification failed\n");
+    } else {
+        printf("DSA signature verified successfully!\n");
+    }
+
+    DSA_SIG_free(dsasig);
+}
+
+int main()
+{
+    DSA *dsa = generateDSAKeyPair();
+
+    printf("DSA Key Pair Generated Successfully\n");
+
+    // Signing and Verifying
+    signAndVerify(dsa);
+
+    // Cleanup
+    DSA_free(dsa);
+
+    return 0;
+}
