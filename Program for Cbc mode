@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+
+#define AES_BLOCK_SIZE 16
+
+void handleErrors(void)
+{
+    fprintf(stderr, "Error occurred\n");
+    exit(EXIT_FAILURE);
+}
+
+void generateRandomKey(unsigned char *key, size_t keySize)
+{
+    if (RAND_bytes(key, keySize) != 1) {
+        handleErrors();
+    }
+}
+
+void generateRandomIV(unsigned char *iv)
+{
+    if (RAND_bytes(iv, AES_BLOCK_SIZE) != 1) {
+        handleErrors();
+    }
+}
+
+void encryptCBCAES(const unsigned char *plaintext, size_t plaintextLen, const unsigned char *key, const unsigned char *iv, unsigned char *ciphertext)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        handleErrors();
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, key, iv) != 1) {
+        handleErrors();
+    }
+
+    int len;
+    if (EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintextLen) != 1) {
+        handleErrors();
+    }
+
+    int ciphertextLen = len;
+
+    if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &len) != 1) {
+        handleErrors();
+    }
+
+    ciphertextLen += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+}
+
+int main()
+{
+    // Generate random AES key and IV
+    unsigned char key[AES_BLOCK_SIZE];
+    unsigned char iv[AES_BLOCK_SIZE];
+    generateRandomKey(key, sizeof(key));
+    generateRandomIV(iv);
+
+    // The message to be encrypted
+    const char *plaintext = "Hello, CBC AES!";
+
+    // Pad the plaintext if needed
+    size_t paddedLen = ((strlen(plaintext) + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
+    unsigned char *paddedText = malloc(paddedLen);
+    memcpy(paddedText, plaintext, strlen(plaintext));
+
+    // Allocate memory for ciphertext
+    unsigned char *ciphertext = malloc(paddedLen);
+
+    // Encrypt using AES in CBC mode
+    encryptCBCAES(paddedText, paddedLen, key, iv, ciphertext);
+
+    // Print results
+    printf("Original Text: %s\n", plaintext);
+    printf("AES CBC Encrypted Text: ");
+    for (size_t i = 0; i < paddedLen; ++i) {
+        printf("%02x", ciphertext[i]);
+    }
+    printf("\n");
+
+    // Clean up
+    free(paddedText);
+    free(ciphertext);
+
+    return 0;
+}
